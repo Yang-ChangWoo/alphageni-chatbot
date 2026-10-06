@@ -41,7 +41,22 @@ def index_paths():
     return d / "expr_embeddings.npy", d / "meta.json"
 
 
+def use_onnx():
+    """ENCODER가 onnx이거나, auto인데 ONNX 모델 파일이 있으면 ONNX 인코더를 씀."""
+    enc = cfg("ENCODER")
+    return enc == "onnx" or (enc == "auto" and (cfg("ONNX_DIR") / "model.onnx").exists())
+
+
+def index_key(model_name):
+    # 인코더가 바뀌면 임베딩 캐시도 다시 만들도록 이름에 표시
+    return model_name + ("#onnx-int8" if use_onnx() else "")
+
+
 def load_model(model_name):
+    if use_onnx():
+        from .onnx_encoder import OnnxEncoder
+
+        return OnnxEncoder(cfg("ONNX_DIR"))
     from sentence_transformers import SentenceTransformer
 
     return SentenceTransformer(model_name)
@@ -86,11 +101,13 @@ class Engine:
 
     @property
     def mode(self):
-        return "embedding+fuzzy" if self.model is not None else "fuzzy-only"
+        if self.model is None:
+            return "fuzzy-only"
+        return "embedding+fuzzy" + ("(onnx)" if use_onnx() else "")
 
     def _embeddings(self):
         """build_index가 만든 .npy가 현재 데이터와 맞으면 그대로, 아니면 새로 만들어 저장."""
-        name = cfg("MODEL_NAME")
+        name = index_key(cfg("MODEL_NAME"))
         npy, meta = index_paths()
         h = texts_hash(self.expr_norm, name)
         if npy.exists() and meta.exists():

@@ -1,21 +1,22 @@
-# Hugging Face Spaces(Docker)용. 이미지를 만들 때 DB 적재와 임베딩까지 끝내 둡니다.
+# Render(무료 512MB) / Hugging Face Spaces 공용.
+# 원래 모델 대신 ONNX 8비트 모델(GitHub Release model-v1)을 받아 쓰고, 이미지를 만들 때 DB 적재와 임베딩까지 끝내 둡니다.
 FROM python:3.11-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    HF_HOME=/app/.cache \
     DJANGO_DEBUG=0 \
-    PORT=7860
+    CHATBOT_ENCODER=onnx \
+    PORT=7860 \
+    MODEL_URL=https://github.com/Yang-ChangWoo/alphageni-chatbot/releases/download/model-v1
 
 WORKDIR /app
-
-# CPU용 torch를 먼저 설치 (GPU용보다 훨씬 작음)
-RUN pip install torch --index-url https://download.pytorch.org/whl/cpu
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY . .
-RUN python manage.py migrate \
+RUN mkdir -p onnx_model \
+ && python -c "import os,urllib.request as u;[u.urlretrieve(os.environ['MODEL_URL']+'/'+f,'onnx_model/'+f) for f in ('model.onnx','tokenizer.json')]" \
+ && python manage.py migrate \
  && python manage.py load_faq \
  && python manage.py load_dicts \
  && python manage.py build_index \

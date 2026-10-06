@@ -75,7 +75,7 @@
   fetch("{% url 'chatbot:api_status' %}").then(r => r.json().then(d => [r.ok, d])).then(([ok, d]) => {
     const dot = document.getElementById('status-dot'), txt = document.getElementById('status-text');
     if (!ok) { dot.className = 'w-2 h-2 rounded-full bg-error'; txt.textContent = '데이터 적재 필요'; document.getElementById('status-pill').title = d.error; return; }
-    if (d.mode !== 'embedding+fuzzy') { dot.className = 'w-2 h-2 rounded-full bg-amber-500'; txt.textContent = '퍼지 전용 모드'; document.getElementById('status-pill').title = d.note; }
+    if (!d.mode.startsWith('embedding+fuzzy')) { dot.className = 'w-2 h-2 rounded-full bg-amber-500'; txt.textContent = '퍼지 전용 모드'; document.getElementById('status-pill').title = d.note; }
     else { txt.textContent = 'AI 응답 가능'; document.getElementById('status-pill').title = '임베딩(ko-sroberta) 0.8 + 퍼지 0.2'; }
   }).catch(() => {});
 </script>

@@ -6,3 +6,4 @@ staticfiles/
 ask_result.csv
 .venv/
 db.sqlite3
+onnx_model/

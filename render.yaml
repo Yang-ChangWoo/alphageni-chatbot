@@ -1,0 +1,11 @@
+# Render Blueprint: New → Blueprint 에서 이 저장소를 고르면 아래 설정으로 무료 웹 서비스가 만들어집니다.
+services:
+  - type: web
+    name: alphageni-chatbot
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/status/
+    autoDeploy: true
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true

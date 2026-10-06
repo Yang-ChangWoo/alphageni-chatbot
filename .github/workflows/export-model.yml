@@ -1,0 +1,38 @@
+# ko-sroberta를 ONNX 8비트로 바꿔 GitHub Release(model-v1)에 올리고,
+# 시험 질문 200개로 원래 모델과 결과를 비교해 실행 요약(Summary)에 표로 남깁니다.
+name: Export ONNX model
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    env:
+      CHATBOT_ENCODER: st
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install -r requirements-local.txt onnx transformers
+      - name: Export and quantize
+        run: python scripts/export_onnx.py --out onnx_model
+      - name: Load data
+        run: |
+          python manage.py migrate -v0
+          python manage.py load_faq
+          python manage.py load_dicts
+      - name: Compare with original model (200 questions)
+        run: python scripts/compare_encoders.py
+      - name: Publish release model-v1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete model-v1 --yes --cleanup-tag || true
+          gh release create model-v1 onnx_model/model.onnx onnx_model/tokenizer.json \
+            --title "ONNX 8비트 모델" --notes "jhgan/ko-sroberta-multitask를 ONNX로 내보내 8비트 양자화한 파일 (배포용)"

@@ -7,3 +7,4 @@ index/meta.json
 staticfiles/
 netlify/
 ask_result.csv
+onnx_model/

@@ -2,9 +2,8 @@
 # 저장소 Settings → Secrets and variables → Actions 에 HF_TOKEN(Write 권한 토큰)을 등록해야 합니다.
 name: Deploy to Hugging Face Space
 
+# Hugging Face 무료 CPU 한도 때문에 지금은 Render를 씀. 필요할 때만 Actions 화면에서 직접 실행.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:

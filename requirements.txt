@@ -1,6 +1,8 @@
+# 서버 실행용 (배포용 Docker도 이것만 설치: ONNX 8비트 모델 사용)
 Django>=5.0
 numpy>=1.24
 rapidfuzz>=3.0
-sentence-transformers>=2.2
+onnxruntime>=1.17
+tokenizers>=0.15
 gunicorn>=22.0
 whitenoise>=6.6

@@ -79,6 +79,9 @@ CHATBOT = {
     "MODEL_NAME": "jhgan/ko-sroberta-multitask",
     # 0으로 두면 임베딩 모델 없이 fuzzy만 씀 (동작 확인용, 기준값이 맞지 않음)
     "USE_MODEL": os.environ.get("CHATBOT_USE_MODEL", "1") == "1",
+    # 인코더: st(sentence-transformers), onnx(경량 8비트, 배포용), auto(ONNX 파일이 있으면 onnx)
+    "ENCODER": os.environ.get("CHATBOT_ENCODER", "auto"),
+    "ONNX_DIR": BASE_DIR / "onnx_model",
     "W_EMBEDDING": 0.80,   # 최종점수 = 0.80 × 임베딩 + 0.20 × fuzzy
     "T_HIGH": 0.75,        # HIGH: 1위 ≥ 0.75 그리고 1·2위 차 ≥ 0.05
     "MARGIN": 0.05,

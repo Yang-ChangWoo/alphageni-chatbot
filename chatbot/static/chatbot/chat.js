@@ -140,7 +140,7 @@
     head.append(icon('analytics', 'text-[18px]'), `판정 근거: ${r.reason}`);
     p.append(head);
     p.append(el('div', 'text-on-surface-variant',
-      `1위 ${r.top1_score.toFixed(3)} · 1·2위 차 ${r.gap.toFixed(3)} · 기준 HIGH ≥ 0.75 & 차 ≥ 0.05, LOW < 0.43 · ${r.mode === 'embedding+fuzzy' ? '임베딩 0.8 + 퍼지 0.2' : '퍼지 전용(모델 없음)'}`));
+      `1위 ${r.top1_score.toFixed(3)} · 1·2위 차 ${r.gap.toFixed(3)} · 기준 HIGH ≥ 0.75 & 차 ≥ 0.05, LOW < 0.43 · ${r.mode.startsWith('embedding+fuzzy') ? '임베딩 0.8 + 퍼지 0.2' : '퍼지 전용(모델 없음)'}`));
     if (r.candidates.length) {
       const t = el('table', 'w-full min-w-[560px] mt-1 tabular-nums');
       const hr = el('tr', 'text-on-surface-variant text-left');

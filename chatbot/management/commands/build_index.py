@@ -20,13 +20,13 @@ class Command(BaseCommand):
         texts = [norm(t).text for t in texts]
 
         name = settings.CHATBOT["MODEL_NAME"]
-        self.stdout.write(f"모델 불러오는 중: {name} (처음 한 번은 내려받느라 시간이 걸립니다)")
+        self.stdout.write(f"모델 불러오는 중: {eng.index_key(name)} (처음 한 번은 내려받느라 시간이 걸립니다)")
         try:
             model = eng.load_model(name)
-        except ImportError:
-            raise CommandError("sentence-transformers가 없습니다. pip install -r requirements.txt")
+        except ImportError as e:
+            raise CommandError(f"모델 패키지가 없습니다 ({e}). pip install -r requirements.txt")
         t = time.time()
-        E = eng.build_embeddings(model, texts, name)
+        E = eng.build_embeddings(model, texts, eng.index_key(name))
         npy, _ = eng.index_paths()
         self.stdout.write(self.style.SUCCESS(
             f"임베딩 {E.shape[0]}개 × {E.shape[1]}차원 저장 ({time.time() - t:.0f}초, {E.nbytes / 1e6:.1f}MB) → {npy}"))
