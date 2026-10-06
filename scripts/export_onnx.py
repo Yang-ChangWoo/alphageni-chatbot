@@ -46,13 +46,23 @@ def main():
                       dynamic_axes={"input_ids": {0: "b", 1: "s"}, "attention_mask": {0: "b", 1: "s"},
                                     "last_hidden_state": {0: "b", 1: "s"}},
                       opset_version=17, dynamo=False)
-    # 행렬곱(MatMul) 가중치만 채널별 8비트로 줄임. 임베딩 층은 그대로 둬서 점수 차이를 줄임
-    quantize_dynamic(str(fp32), str(out / "model.onnx"), weight_type=QuantType.QInt8,
-                     per_channel=True, op_types_to_quantize=["MatMul"])
+    # 양자화 방식 후보 4개를 만들어 두고, compare_encoders.py가 200문항으로 고름 (variants/<이름>/)
+    variants = {
+        "all_s8": dict(weight_type=QuantType.QInt8),
+        "matmul_s8": dict(weight_type=QuantType.QInt8, op_types_to_quantize=["MatMul"]),
+        "matmul_u8": dict(weight_type=QuantType.QUInt8, op_types_to_quantize=["MatMul"]),
+        "matmul_s8_pc_rr": dict(weight_type=QuantType.QInt8, op_types_to_quantize=["MatMul"],
+                                per_channel=True, reduce_range=True),
+    }
+    for name, kw in variants.items():
+        d = out / "variants" / name
+        d.mkdir(parents=True, exist_ok=True)
+        quantize_dynamic(str(fp32), str(d / "model.onnx"), **kw)
+        (d / "tokenizer.json").write_bytes((out / "tokenizer.json").read_bytes())
+        print(name, round((d / "model.onnx").stat().st_size / 1e6, 1), "MB")
     fp32.unlink()
     for p in out.glob("*.data"):
         p.unlink()
-    print("model.onnx", round((out / "model.onnx").stat().st_size / 1e6, 1), "MB")
 
     # 원래 모델과 비교
     import sys
@@ -62,9 +72,9 @@ def main():
     with open(Path(__file__).resolve().parent.parent / "tests/test_questions_200.csv", encoding="utf-8-sig") as f:
         qs = [r["query"] for r in csv.DictReader(f)]
     A = SentenceTransformer(NAME).encode(qs, normalize_embeddings=True)
-    B = OnnxEncoder(out).encode(qs)
-    cos = (A * B).sum(1)
-    print(f"원래 모델 대비 코사인: 평균 {cos.mean():.4f}, 최소 {cos.min():.4f}")
+    for name in variants:
+        cos = (A * OnnxEncoder(out / "variants" / name).encode(qs)).sum(1)
+        print(f"{name}: 원래 모델 대비 코사인 평균 {cos.mean():.4f}, 최소 {cos.min():.4f}")
 
 
 if __name__ == "__main__":
