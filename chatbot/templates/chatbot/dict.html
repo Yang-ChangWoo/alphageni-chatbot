@@ -1,0 +1,81 @@
+{% extends "chatbot/base.html" %}
+{% block title %}사전 점검 · 알파지니 취업 챗봇{% endblock %}
+{% block content %}
+<div class="flex flex-col gap-space-lg pb-space-lg">
+  <div class="rounded-xl bg-gradient-to-r from-surface-container-lowest via-[#fff0f3] to-surface-container-low p-space-lg shadow-sm">
+    <span class="px-2.5 py-0.5 rounded-full bg-primary-container text-on-primary font-label-sm text-label-sm font-semibold">사전 자동 점검</span>
+    <p class="font-headline-md text-headline-md font-bold mt-1">줄임말 {{ abbr_count }}개 · 비속어 {{ prof_count }}개</p>
+    <p class="font-body-sm text-body-sm text-on-surface-variant">질문이 들어오면 비속어를 빼고, 반복 기호를 정리한 뒤, 줄임말을 원래 말로 바꿔서 검색해요. 뜻이 여러 개인 줄임말은 모든 뜻으로 검색해요.</p>
+  </div>
+
+  <div class="bg-surface-container-lowest rounded-2xl card-1 soft-border p-space-lg flex flex-col gap-space-md">
+    <span class="font-title-md text-title-md font-bold flex items-center gap-1.5"><span class="material-symbols-outlined text-primary">science</span>문장 넣어 보기</span>
+    <div class="flex gap-space-xs">
+      <input id="t-in" value="ㅅㅂ 자소서 ㅈㄴ 어렵네 인적성 꿀팁 ㅠㅠ" class="flex-1 min-w-0 rounded-xl border-[1.5px] border-[#F3D7DC] focus:border-primary-container focus:outline-none px-space-md py-2 font-body-md text-body-md"/>
+      <button id="t-btn" class="px-space-lg rounded-full bg-primary text-on-primary font-label-md text-label-md">점검</button>
+    </div>
+    <div id="t-out" class="font-body-sm text-body-sm flex flex-col gap-1.5"></div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-space-lg">
+    <div class="bg-surface-container-lowest rounded-2xl card-1 soft-border p-space-lg">
+      <p class="font-title-md text-title-md font-bold mb-space-sm">줄임말 사전</p>
+      <div class="max-h-[32rem] overflow-auto">
+        <table class="w-full font-body-sm text-body-sm">
+          <thead class="sticky top-0 bg-surface-container-lowest text-on-surface-variant text-left"><tr><th class="py-1 pr-2">줄임말</th><th class="pr-2">원래 말</th><th class="pr-2">분류</th><th>비고</th></tr></thead>
+          <tbody>
+          {% for a in abbrs %}
+            <tr class="border-t border-[#F5E6E8] align-top"><td class="py-1 pr-2 font-semibold whitespace-nowrap">{{ a.abbr }}</td>
+              <td class="pr-2">{{ a.expansion }}{% if a.ambiguous %} <span class="px-1.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed-variant font-label-sm text-label-sm">다의어</span> <span class="text-on-surface-variant">{{ a.alt_expansions }}</span>{% endif %}</td>
+              <td class="pr-2 whitespace-nowrap text-on-surface-variant">{{ a.category }}</td><td class="text-on-surface-variant">{{ a.note }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="bg-surface-container-lowest rounded-2xl card-1 soft-border p-space-lg">
+      <p class="font-title-md text-title-md font-bold mb-space-sm">비속어 사전</p>
+      <div class="max-h-[32rem] overflow-auto">
+        <table class="w-full font-body-sm text-body-sm">
+          <thead class="sticky top-0 bg-surface-container-lowest text-on-surface-variant text-left"><tr><th class="py-1 pr-2">단어</th><th class="pr-2">유형</th><th class="pr-2">심각도</th><th>처리</th></tr></thead>
+          <tbody>
+          {% for p in profs %}
+            <tr class="border-t border-[#F5E6E8]"><td class="py-1 pr-2 font-semibold">{{ p.word }}</td><td class="pr-2 text-on-surface-variant">{{ p.type }}</td><td class="pr-2 tabular-nums">{{ p.severity }}</td><td>{{ p.get_action_display }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% csrf_token %}
+{% endblock %}
+{% block script %}
+<script>
+(() => {
+  const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  const out = document.getElementById('t-out'), inp = document.getElementById('t-in');
+  function line(label, value, cls = '') {
+    const p = document.createElement('p');
+    const b = document.createElement('b'); b.textContent = label + ' '; b.className = 'text-on-surface';
+    const s = document.createElement('span'); s.textContent = value; s.className = cls;
+    p.append(b, s); out.append(p);
+  }
+  async function run() {
+    const r = await fetch("{% url 'chatbot:api_normalize' %}", {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf}, body: JSON.stringify({q: inp.value})});
+    const d = await r.json();
+    out.innerHTML = '';
+    if (!r.ok) { line('오류', d.error, 'text-error'); return; }
+    line('검색 문장', d.normalized || '(남는 내용 없음)', 'text-primary font-semibold');
+    line('비속어 제거', d.profanity_removed.join(', ') || '없음');
+    if (d.masked.length) line('표시만', d.masked.join(', '));
+    line('줄임말 확장', d.abbr_expanded.map(([a, b]) => `${a} → ${b}`).join(', ') || '없음');
+    if (d.abbr_ambiguous.length) line('다의어', d.abbr_ambiguous.map(([a, o]) => `${a}: ${o.join(' / ')}`).join(', '));
+    if (d.variants.length > 1) line('함께 검색하는 문장', d.variants.slice(1).join(' | '));
+  }
+  document.getElementById('t-btn').addEventListener('click', run);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) run(); });
+  run();
+})();
+</script>
+{% endblock %}

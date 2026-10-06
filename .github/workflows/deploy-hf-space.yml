@@ -1,0 +1,31 @@
+# main에 push하면 Hugging Face Space(yangchangwoo/alphageni-chatbot)에 파일을 올려 자동으로 다시 빌드합니다.
+# 저장소 Settings → Secrets and variables → Actions 에 HF_TOKEN(Write 권한 토큰)을 등록해야 합니다.
+name: Deploy to Hugging Face Space
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -U huggingface_hub
+      - name: Upload to Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os
+          from huggingface_hub import HfApi
+          HfApi(token=os.environ["HF_TOKEN"]).upload_folder(
+              repo_id="yangchangwoo/alphageni-chatbot", repo_type="space", folder_path=".",
+              ignore_patterns=[".git/*", ".github/*", "netlify/*", "db.sqlite3", ".venv/*"],
+              commit_message=f"Deploy {os.environ['GITHUB_SHA'][:7]} from GitHub",
+          )
+          PY

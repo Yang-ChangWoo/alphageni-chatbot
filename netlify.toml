@@ -1,0 +1,4 @@
+# Netlify에서 이 저장소를 연결하면 netlify 폴더만 배포합니다 (빌드 없음, Space로 프록시).
+[build]
+  publish = "netlify"
+  command = ""

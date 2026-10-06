@@ -1,0 +1,78 @@
+{% extends "chatbot/base.html" %}{% load humanize %}
+{% block title %}취업 Q&A · 알파지니 취업 챗봇{% endblock %}
+{% block content %}
+<div class="flex flex-col gap-space-lg pb-space-lg">
+  <div class="rounded-xl bg-gradient-to-r from-surface-container-lowest via-[#fff0f3] to-surface-container-low p-space-lg shadow-sm flex flex-col md:flex-row md:items-end justify-between gap-space-md">
+    <div>
+      <span class="px-2.5 py-0.5 rounded-full bg-primary-container text-on-primary font-label-sm text-label-sm font-semibold">취업 Q&amp;A</span>
+      <p class="font-headline-md text-headline-md font-bold mt-1">챗봇이 답하는 FAQ {{ faq_count|intcomma }}개</p>
+      <p class="font-body-sm text-body-sm text-on-surface-variant">FAQ마다 대표 질문 1개와 유사 질문 9개로 검색해요. 펼치면 답변, 출처, 유사 질문을 볼 수 있어요.</p>
+    </div>
+    <form method="get" class="flex items-center gap-space-xs bg-surface-container-lowest rounded-full pl-space-md pr-1 py-1 border-[1.5px] border-[#F3D7DC] focus-within:border-primary-container w-full md:w-96">
+      <span class="material-symbols-outlined text-[18px] text-on-surface-variant">search</span>
+      {% if category %}<input type="hidden" name="category" value="{{ category }}"/>{% endif %}
+      <input name="q" value="{{ q }}" placeholder="질문, 답변, 유사 질문에서 찾기" class="flex-1 min-w-0 bg-transparent focus:outline-none font-body-sm text-body-sm py-1"/>
+      <button class="px-space-md py-1.5 rounded-full bg-primary text-on-primary font-label-sm text-label-sm">검색</button>
+    </form>
+  </div>
+
+  <div class="flex items-center gap-space-xs overflow-x-auto no-scrollbar pb-1">
+    {% with base="whitespace-nowrap px-space-md py-2 rounded-full font-body-sm text-body-sm shadow-sm flex items-center gap-1.5 transition-all" %}
+    <a href="?{% if q %}q={{ q|urlencode }}{% endif %}" class="{{ base }} {% if not category %}bg-primary-container text-on-primary{% else %}bg-surface-container-lowest hover:bg-primary-fixed{% endif %}">전체</a>
+    {% for c in categories %}
+    <a href="?category={{ c.name|urlencode }}{% if q %}&q={{ q|urlencode }}{% endif %}" class="{{ base }} {% if category == c.name %}bg-primary-container text-on-primary{% else %}bg-surface-container-lowest hover:bg-primary-fixed{% endif %}">
+      <span class="material-symbols-outlined text-[16px] {% if category != c.name %}text-primary{% endif %}">{{ c.icon }}</span>{{ c.name }} <span class="opacity-70">{{ c.count }}</span>
+    </a>
+    {% endfor %}
+    {% endwith %}
+  </div>
+
+  <p class="font-body-sm text-body-sm text-on-surface-variant">{{ total|intcomma }}개{% if q %} · '{{ q }}' 검색 결과{% endif %}</p>
+
+  <div class="flex flex-col gap-space-sm">
+    {% for f in page %}
+    <details class="group bg-surface-container-lowest rounded-2xl card-1 soft-border">
+      <summary class="cursor-pointer list-none p-space-lg flex items-start gap-space-md">
+        <span class="material-symbols-outlined text-primary text-[22px] mt-0.5">help</span>
+        <div class="flex-1 min-w-0">
+          <p class="font-title-md text-title-md text-on-surface">{{ f.rep_question }}</p>
+          <div class="flex flex-wrap gap-1.5 mt-1 font-label-sm text-label-sm">
+            <span class="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed-variant">{{ f.category }}</span>
+            {% if f.job_group %}<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant">{{ f.job_group }}</span>{% endif %}
+            <span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant">{{ f.faq_id }}</span>
+          </div>
+        </div>
+        <span class="material-symbols-outlined text-on-surface-variant transition-transform group-open:rotate-180">expand_more</span>
+      </summary>
+      <div class="px-space-lg pb-space-lg flex flex-col gap-space-md">
+        <p class="font-body-md text-body-md leading-relaxed whitespace-pre-line">{{ f.answer }}</p>
+        <div class="bg-gradient-to-r from-[#fff3f5] to-surface-container-lowest p-space-md rounded-xl flex flex-col gap-space-xs font-body-sm text-body-sm text-on-surface-variant">
+          <span class="font-label-md text-label-md font-bold text-on-surface flex items-center gap-1"><span class="material-symbols-outlined text-primary text-[18px]">fact_check</span>출처</span>
+          {% if f.discovery_source %}<p class="break-words"><b class="text-on-surface">질문 출처</b> {{ f.discovery_source|urlize }}</p>{% endif %}
+          {% if f.evidence_source %}<p class="break-words"><b class="text-on-surface">근거 자료</b> {{ f.evidence_source|urlize }}</p>{% endif %}
+        </div>
+        <div>
+          <p class="font-label-md text-label-md mb-space-xs">검색에 쓰는 표현 {{ f.expressions.all|length }}개</p>
+          <div class="flex flex-wrap gap-1.5">
+            {% for e in f.expressions.all %}
+            <span class="px-2.5 py-1 rounded-full font-body-sm text-body-sm {% if e.is_representative %}bg-primary-fixed text-on-primary-fixed-variant{% else %}bg-surface-container-low text-on-surface{% endif %}" title="{{ e.variation_label }}">{{ e.text }}</span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </details>
+    {% empty %}
+    <p class="p-space-lg text-on-surface-variant">찾는 FAQ가 없어요.</p>
+    {% endfor %}
+  </div>
+
+  {% if page.paginator.num_pages > 1 %}
+  <nav class="flex items-center justify-center gap-space-xs font-label-md text-label-md">
+    {% if page.has_previous %}<a class="px-3 py-1.5 rounded-full bg-surface-container-lowest shadow-sm hover:bg-primary-fixed" href="?page={{ page.previous_page_number }}{% if category %}&category={{ category|urlencode }}{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">이전</a>{% endif %}
+    <span class="px-3 py-1.5 text-on-surface-variant tabular-nums">{{ page.number }} / {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a class="px-3 py-1.5 rounded-full bg-surface-container-lowest shadow-sm hover:bg-primary-fixed" href="?page={{ page.next_page_number }}{% if category %}&category={{ category|urlencode }}{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">다음</a>{% endif %}
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}
+{% block style %}details>summary::-webkit-details-marker{display:none} a[href^="http"]{color:#4755b9;text-decoration:underline;word-break:break-all}{% endblock %}

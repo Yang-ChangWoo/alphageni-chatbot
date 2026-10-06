@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+db.sqlite3
+index/*.npy
+staticfiles/
+ask_result.csv
+.venv/
+db.sqlite3

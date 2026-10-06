@@ -1,0 +1,115 @@
+{% extends "chatbot/base.html" %}{% load static humanize %}
+{% block title %}상담 라운지 · 알파지니 취업 챗봇{% endblock %}
+{% block content %}
+<div class="flex flex-col w-full pb-space-lg">
+  <!-- 인사 & 데이터 현황 -->
+  <div class="relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-surface-container-lowest via-[#fff0f3] to-surface-container-low p-space-lg shadow-sm mb-space-lg">
+    <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-space-md">
+      <div class="flex items-center gap-space-md">
+        <div class="relative w-14 h-14 shrink-0 rounded-full bg-primary-container/20 flex items-center justify-center p-1 shadow-sm">
+          <img alt="알파지니 마스코트" class="w-full h-full object-contain rounded-full" src="{% static 'chatbot/mascot.png' %}"/>
+          <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-surface-container-lowest"></span>
+        </div>
+        <div class="flex flex-col">
+          <div class="flex items-center gap-space-xs">
+            <span class="px-2.5 py-0.5 rounded-full bg-primary-container text-on-primary font-label-sm text-label-sm font-semibold tracking-wide">AI 커리어 코치</span>
+            <span class="font-label-sm text-label-sm text-on-surface-variant">답변 준비 완료</span>
+          </div>
+          <p class="font-headline-md text-headline-md text-on-surface font-bold mt-0.5">안녕하세요! 당신의 취업 준비 메이트 알파지니입니다.</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">직무 탐색부터 서류, 면접까지 자주 묻는 취업 질문에 출처와 함께 답해 드려요. 줄임말이나 편한 말투로 물어봐도 괜찮아요.</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-space-sm self-start md:self-auto">
+        <div class="bg-surface-container-lowest/90 px-space-md py-space-xs rounded-xl shadow-sm flex flex-col items-center">
+          <span class="font-label-sm text-label-sm text-on-surface-variant">등록 FAQ</span>
+          <span class="font-title-md text-title-md text-primary font-bold tabular-nums">{{ faq_count|intcomma }}</span>
+        </div>
+        <div class="bg-surface-container-lowest/90 px-space-md py-space-xs rounded-xl shadow-sm flex flex-col items-center">
+          <span class="font-label-sm text-label-sm text-on-surface-variant">검색 표현</span>
+          <span class="font-title-md text-title-md text-secondary font-bold tabular-nums">{{ expr_count|intcomma }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 자주 묻는 질문 바로가기 -->
+  <div class="w-full mb-space-lg">
+    <div class="flex items-center justify-between mb-space-xs">
+      <span class="font-label-md text-label-md text-on-surface font-semibold flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[18px] text-primary" style="font-variation-settings:'FILL' 1;">auto_awesome</span>
+        자주 묻는 취업 질문 바로가기
+      </span>
+      <span class="font-body-sm text-body-sm text-on-surface-variant">클릭하면 바로 질문해요</span>
+    </div>
+    <div class="flex items-center gap-space-xs overflow-x-auto no-scrollbar pb-1" id="quick-chips">
+      {% for c in chips %}
+      <button type="button" data-ask="{{ c.text }}" class="ask whitespace-nowrap px-space-md py-2 rounded-full bg-surface-container-lowest text-on-surface hover:bg-primary-fixed hover:text-on-primary-fixed-variant transition-all font-body-sm text-body-sm shadow-sm flex items-center gap-1.5 group">
+        <span class="material-symbols-outlined text-[16px] text-primary group-hover:scale-110 transition-transform">{{ c.icon }}</span>{{ c.text }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- 대화 -->
+  <div class="w-full flex flex-col gap-space-lg mb-space-xl" id="chat-stream"></div>
+
+  <!-- 입력창 -->
+  <div class="sticky bottom-4 w-full z-40">
+    <div class="relative max-w-4xl mx-auto">
+      <div class="flex items-end justify-between px-space-md mb-2 pointer-events-none">
+        <div class="pointer-events-auto hidden sm:flex items-end gap-space-sm">
+          <div class="relative group cursor-pointer" id="mascot">
+            <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-surface-container-lowest p-1 shadow-lg flex items-center justify-center transform group-hover:scale-105 transition-all">
+              <img alt="알파지니 캐릭터" class="w-full h-full object-contain rounded-full" src="{% static 'chatbot/mascot.png' %}"/>
+            </div>
+            <div class="absolute -inset-1 bg-gradient-to-r from-primary-container to-secondary-container rounded-full blur-sm opacity-30 -z-10 group-hover:opacity-60 transition-opacity"></div>
+          </div>
+          <div class="bg-surface-container-lowest text-on-surface px-space-md py-space-xs rounded-2xl rounded-bl-none shadow-md mb-2 flex items-center gap-space-xs" id="mascot-speech">
+            <span class="w-2 h-2 rounded-full bg-primary animate-ping"></span>
+            <span class="font-label-md text-label-md font-semibold text-on-surface" id="mascot-text">어떤 취업 고민이든 편하게 물어보세요!</span>
+          </div>
+        </div>
+        <div class="pointer-events-auto hidden sm:flex items-center gap-space-xs bg-surface-container-lowest/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm">
+          <span class="material-symbols-outlined text-primary text-[18px]">verified</span>
+          <span class="font-label-sm text-label-sm text-on-surface-variant font-medium">출처가 확인된 FAQ {{ faq_count|intcomma }}개 기반</span>
+        </div>
+      </div>
+      <div class="bg-surface-container-lowest/95 backdrop-blur-xl rounded-2xl shadow-xl p-space-sm flex flex-col gap-space-xs border-[1.5px] border-[#F3D7DC] focus-within:border-primary-container focus-within:shadow-[0_0_0_3px_rgba(240,98,118,0.15)] transition-all">
+        <div class="flex items-center justify-between px-space-xs text-on-surface-variant">
+          <div class="flex items-center gap-space-xs">
+            <span class="material-symbols-outlined text-[18px] text-primary">chat_bubble</span>
+            <span class="hidden sm:inline font-label-sm text-label-sm font-medium">AI 취업 컨설턴트 알파지니 실시간 대화창</span>
+          </div>
+          <div class="flex items-center gap-space-md">
+            <label class="whitespace-nowrap flex items-center gap-1 font-label-sm text-label-sm cursor-pointer select-none" title="판정 근거와 후보별 점수를 함께 보여줘요">
+              <input type="checkbox" id="show-score" class="accent-[#F06276] w-3.5 h-3.5"/> 점수 보기
+            </label>
+            <span class="whitespace-nowrap font-label-sm text-label-sm text-on-surface-variant/80 tabular-nums" id="char-count">0 / 1000자</span>
+          </div>
+        </div>
+        <div class="flex items-end gap-space-xs">
+          <textarea id="user-input" rows="1" maxlength="1000" placeholder="예: 자소서 지원동기 어케 써요?"
+            class="flex-1 w-full bg-transparent resize-none py-2 px-space-xs font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none max-h-32 leading-relaxed"></textarea>
+          <button id="send-button" type="button" disabled title="보내기"
+            class="w-11 h-11 rounded-xl bg-primary hover:bg-[#97263b] text-on-primary flex items-center justify-center transition-all flex-shrink-0 shadow-md transform active:scale-95 disabled:bg-surface-container-high disabled:text-on-surface-variant disabled:shadow-none disabled:cursor-not-allowed">
+            <span class="material-symbols-outlined text-[22px]">send</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% csrf_token %}
+{% endblock %}
+{% block script %}
+<script>
+  window.CHAT = {
+    api: "{% url 'chatbot:api_chat' %}",
+    faq: "{% url 'chatbot:api_faq' 'FAQ_ID' %}",
+    category: "{% url 'chatbot:api_category' %}",
+    mascot: "{% static 'chatbot/mascot.png' %}",
+    faqCount: {{ faq_count }},
+  };
+</script>
+<script src="{% static 'chatbot/chat.js' %}"></script>
+{% endblock %}

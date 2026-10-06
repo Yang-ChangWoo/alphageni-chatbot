@@ -1,0 +1,84 @@
+{% load static humanize %}<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>{% block title %}알파지니 취업 챗봇{% endblock %}</title>
+<link rel="icon" href="{% static 'chatbot/mascot.png' %}"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<!-- Stitch 디자인 토큰으로 빌드한 Tailwind CSS (tailwind/ 폴더 참고) -->
+<link href="{% static 'chatbot/app.css' %}" rel="stylesheet"/>
+<style>
+  html,body{margin:0;padding:0}
+  body{font-family:"Plus Jakarta Sans","Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,sans-serif;overscroll-behavior:none;word-break:keep-all}
+  .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle;line-height:1}
+  .no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{scrollbar-width:none}
+  .card-1{box-shadow:0 4px 16px -2px rgba(240,98,118,.06),0 2px 6px -1px rgba(32,35,42,.04)}
+  .card-2{box-shadow:0 10px 24px -4px rgba(240,98,118,.12),0 4px 10px -2px rgba(32,35,42,.05)}
+  .soft-border{border:1px solid rgba(240,98,118,.1)}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .animate-fadeIn{animation:fadeIn .25s ease-out}
+  {% block style %}{% endblock %}
+</style>
+</head>
+<body class="bg-gradient-to-b from-[#FFF5F6] via-surface to-surface text-on-surface font-body-md text-body-md min-h-screen flex flex-col">
+<header class="fixed top-0 w-full z-50 bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_4px_20px_-4px_rgba(240,98,118,0.08)]">
+  <div class="h-16 max-w-7xl mx-auto px-margin md:px-margin-tablet lg:px-margin-desktop flex items-center justify-between gap-space-sm">
+    <div class="flex items-center gap-space-xl min-w-0">
+      <a class="flex items-center gap-space-xs shrink-0" href="{% url 'chatbot:chat' %}">
+        <div class="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center text-on-primary shadow-[0_2px_8px_rgba(240,98,118,0.25)]">
+          <span class="material-symbols-outlined text-[20px]">smart_toy</span>
+        </div>
+        <div class="hidden sm:flex flex-col">
+          <span class="font-title-md text-title-md font-bold text-on-surface tracking-tight leading-none">알파지니</span>
+          <span class="font-label-sm text-label-sm text-primary font-medium mt-0.5">취업 챗봇 AI</span>
+        </div>
+      </a>
+      <nav class="flex items-center gap-1 overflow-x-auto no-scrollbar">
+        {% with on="bg-primary-container text-on-primary font-semibold shadow-[0_2px_8px_rgba(240,98,118,0.2)]" off="text-on-surface-variant hover:text-on-surface hover:bg-surface-container" %}
+        <a href="{% url 'chatbot:chat' %}" class="whitespace-nowrap font-body-md text-body-md px-space-md py-space-xs rounded-full transition-all {% if nav == 'chat' %}{{ on }}{% else %}{{ off }}{% endif %}" {% if nav == 'chat' %}aria-current="page"{% endif %}>상담 라운지</a>
+        <a href="{% url 'chatbot:faq' %}" class="whitespace-nowrap font-body-md text-body-md px-space-md py-space-xs rounded-full transition-all {% if nav == 'faq' %}{{ on }}{% else %}{{ off }}{% endif %}" {% if nav == 'faq' %}aria-current="page"{% endif %}>취업 Q&amp;A</a>
+        <a href="{% url 'chatbot:dict' %}" class="whitespace-nowrap font-body-md text-body-md px-space-md py-space-xs rounded-full transition-all {% if nav == 'dict' %}{{ on }}{% else %}{{ off }}{% endif %}" {% if nav == 'dict' %}aria-current="page"{% endif %}>사전 점검</a>
+        {% endwith %}
+      </nav>
+    </div>
+    <div class="hidden sm:flex items-center gap-space-xs px-space-md py-space-xs rounded-full bg-surface-container-lowest/90 shadow-[0_2px_6px_rgba(32,35,42,0.04)] shrink-0" id="status-pill" title="">
+      <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" id="status-dot"></span>
+      <span class="font-label-sm text-label-sm text-on-surface-variant" id="status-text">AI 응답 가능</span>
+    </div>
+  </div>
+</header>
+
+<main class="w-full pt-20 flex-1 max-w-7xl mx-auto px-margin md:px-margin-tablet lg:px-margin-desktop">
+{% block content %}{% endblock %}
+</main>
+
+<footer class="w-full bg-surface-container-lowest/60 backdrop-blur-md shadow-[0_-1px_12px_rgba(240,98,118,0.03)] mt-space-2xl py-space-xl">
+  <div class="max-w-7xl mx-auto px-margin md:px-margin-tablet lg:px-margin-desktop flex flex-col md:flex-row items-center justify-between gap-space-md text-center md:text-left">
+    <div class="flex flex-col gap-space-2xs">
+      <span class="font-title-md text-title-md font-bold text-on-surface">알파지니 AI 커리어 서비스</span>
+      <p class="font-body-sm text-body-sm text-on-surface-variant">© 2026 알파지니 취업 챗봇. 모든 취업 준비생의 도전을 응원합니다.</p>
+    </div>
+    <div class="flex items-center gap-space-lg font-body-sm text-body-sm text-on-surface-variant">
+      <span>FAQ {{ faq_count|intcomma }}개</span><span>검색 표현 {{ expr_count|intcomma }}개</span>
+      <span>줄임말 {{ abbr_count }} · 비속어 {{ prof_count }}</span>
+      <a class="hover:text-primary transition-colors" href="/admin/">관리자</a>
+    </div>
+  </div>
+</footer>
+<script>
+  // 검색 방식 표시 (임베딩+퍼지 / 퍼지 전용 / 데이터 없음)
+  fetch("{% url 'chatbot:api_status' %}").then(r => r.json().then(d => [r.ok, d])).then(([ok, d]) => {
+    const dot = document.getElementById('status-dot'), txt = document.getElementById('status-text');
+    if (!ok) { dot.className = 'w-2 h-2 rounded-full bg-error'; txt.textContent = '데이터 적재 필요'; document.getElementById('status-pill').title = d.error; return; }
+    if (d.mode !== 'embedding+fuzzy') { dot.className = 'w-2 h-2 rounded-full bg-amber-500'; txt.textContent = '퍼지 전용 모드'; document.getElementById('status-pill').title = d.note; }
+    else { txt.textContent = 'AI 응답 가능'; document.getElementById('status-pill').title = '임베딩(ko-sroberta) 0.8 + 퍼지 0.2'; }
+  }).catch(() => {});
+</script>
+{% block script %}{% endblock %}
+</body>
+</html>
