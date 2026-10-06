@@ -46,7 +46,9 @@ def main():
                       dynamic_axes={"input_ids": {0: "b", 1: "s"}, "attention_mask": {0: "b", 1: "s"},
                                     "last_hidden_state": {0: "b", 1: "s"}},
                       opset_version=17, dynamo=False)
-    quantize_dynamic(str(fp32), str(out / "model.onnx"), weight_type=QuantType.QInt8)
+    # 행렬곱(MatMul) 가중치만 채널별 8비트로 줄임. 임베딩 층은 그대로 둬서 점수 차이를 줄임
+    quantize_dynamic(str(fp32), str(out / "model.onnx"), weight_type=QuantType.QInt8,
+                     per_channel=True, op_types_to_quantize=["MatMul"])
     fp32.unlink()
     for p in out.glob("*.data"):
         p.unlink()
