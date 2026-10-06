@@ -33,3 +33,31 @@ jobs:
               commit_message=f"Deploy {os.environ['GITHUB_SHA'][:7]} from GitHub",
           )
           PY
+      - name: Wait for Space build
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os, time, sys, urllib.request
+          from huggingface_hub import HfApi
+          repo = "yangchangwoo/alphageni-chatbot"
+          api = HfApi(token=os.environ["HF_TOKEN"])
+          time.sleep(20)
+          for i in range(90):  # 최대 약 30분
+              stage = api.get_space_runtime(repo).stage
+              print(f"[{i * 20}s] {stage}", flush=True)
+              if stage == "RUNNING":
+                  sys.exit(0)
+              if stage in ("BUILD_ERROR", "RUNTIME_ERROR", "CONFIG_ERROR"):
+                  kind = "build" if stage != "RUNTIME_ERROR" else "run"
+                  req = urllib.request.Request(f"https://huggingface.co/api/spaces/{repo}/logs/{kind}",
+                                               headers={"Authorization": f"Bearer {os.environ['HF_TOKEN']}"})
+                  try:
+                      with urllib.request.urlopen(req, timeout=20) as r:
+                          print(r.read().decode("utf-8", "replace")[-15000:])
+                  except Exception as e:
+                      print("로그를 가져오지 못함:", e)
+                  sys.exit(1)
+              time.sleep(20)
+          sys.exit("30분 안에 RUNNING이 되지 않음")
+          PY
