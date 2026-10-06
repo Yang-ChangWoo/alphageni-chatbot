@@ -20,6 +20,10 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::error::HF_TOKEN 시크릿이 없습니다. 저장소 Settings → Secrets and variables → Actions 에 Hugging Face Write 토큰을 HF_TOKEN 이름으로 추가하세요."
+            exit 1
+          fi
           python - <<'PY'
           import os
           from huggingface_hub import HfApi
