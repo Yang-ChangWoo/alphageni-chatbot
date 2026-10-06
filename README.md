@@ -28,7 +28,7 @@ FAQ 580개(대표 질문 + 유사 질문 9개 = 검색 표현 5,800개)와 줄�
 cd web
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements-local.txt   # 원래 모델(sentence-transformers) 포함
 
 python manage.py migrate
 python manage.py load_faq      # data/faq_580_with_similar.csv + data/expressions_580.csv
@@ -64,23 +64,21 @@ python manage.py ask --csv 시험질문.csv --out 결과.csv   # query 열이 �
 CSV를 고친 뒤 `load_faq` / `load_dicts` → `build_index` 순서로 다시 실행하고 서버를 재시작하세요.
 `build_index`를 빼먹어도 서버가 데이터가 바뀐 것을 알아채고 처음 뜰 때 임베딩을 다시 만듭니다.
 
-## 배포 (Hugging Face Spaces + Netlify)
-Netlify는 정적 사이트와 JavaScript·Go 함수만 실행해서 Django(Python)와 ko-sroberta 모델을 직접 돌릴 수 없습니다.
-그래서 Django 서버는 Hugging Face Spaces(무료, 메모리 16GB, Docker)에 올리고, Netlify는 그 서버로 요청을 넘기는 주소 역할만 합니다.
+## 배포 (Render + Netlify)
+Netlify는 Python을 실행하지 못해서, Django 서버는 Render 무료 웹 서비스(메모리 512MB)에 올리고 Netlify는 그 서버로 요청을 넘깁니다.
+원래 모델(torch 포함 1GB 이상)은 512MB에 들어가지 않아서, 배포용 Docker는 **ONNX 8비트로 줄인 모델**을 씁니다.
 
-1. **Hugging Face Space 만들기**: https://huggingface.co/new-space → 이름(예: `alphageni-chatbot`), SDK는 **Docker**, Blank 템플릿, Public
-2. **파일 올리기**: Space의 Files → Add file → Upload files 에 이 `web` 폴더 안의 파일과 폴더를 전부 끌어다 놓고 Commit
-   (`db.sqlite3`, `.venv`, `netlify` 폴더는 빼도 됩니다. 이 README 맨 위의 `sdk: docker`, `app_port: 7860` 설정을 Space가 읽습니다)
-3. **(선택) Settings → Variables and secrets** 에 `DJANGO_SECRET_KEY`(아무 긴 문자열) 추가
-4. 빌드 로그(Logs)가 끝나면 `https://<아이디>-alphageni-chatbot.hf.space` 에서 챗봇이 열립니다.
-   빌드 때 모델을 내려받고 임베딩 5,800개를 만들어서 처음 빌드는 10분 정도 걸립니다.
-5. **Netlify 연결**: `netlify/_redirects` 의 `YOUR-ID-alphageni-chatbot.hf.space` 를 4번 주소로 바꾼 뒤,
-   app.netlify.com → Add new project → Deploy manually(“Upload your project files”)에 **`netlify` 폴더**를 끌어다 놓습니다.
-   이제 `https://<사이트이름>.netlify.app` 으로 접속하면 챗봇이 보입니다.
-6. Netlify 주소에서 `/admin/` 로그인까지 쓰려면 Space의 Variables에 `CSRF_TRUSTED_ORIGINS=https://<사이트이름>.netlify.app` 를 추가하고,
-   Space 안에서 관리자 계정이 필요하면 Dockerfile의 RUN 줄 끝에 `createsuperuser --noinput`(환경변수 `DJANGO_SUPERUSER_USERNAME`, `DJANGO_SUPERUSER_PASSWORD`)를 넣으세요.
+1. **모델 파일**: Actions의 `Export ONNX model` 워크플로가 모델을 ONNX 8비트로 바꿔 Release `model-v1`에 올리고,
+   시험 질문 200개로 원래 모델과 정확도를 비교한 표를 실행 요약(Summary)에 남깁니다. 이미 실행돼 있어서 다시 할 필요는 없습니다.
+2. **Render**: https://dashboard.render.com → New → **Blueprint** → GitHub의 `alphageni-chatbot` 저장소 선택 → Apply.
+   `render.yaml` 설정대로 무료 Docker 서비스가 만들어지고, 빌드 때 모델 다운로드·DB 적재·임베딩까지 끝냅니다(10분 정도).
+   이후 main에 push하면 자동으로 다시 배포됩니다.
+3. 서비스 주소(예: `https://alphageni-chatbot.onrender.com`)가 `netlify/_redirects`와 다르면 그 파일을 고쳐서 push합니다.
+4. **Netlify**: Add new project → Import an existing project → GitHub → `alphageni-chatbot` → Deploy.
+   `netlify.toml`이 `netlify` 폴더만 배포합니다.
 
-무료 Space는 48시간 동안 접속이 없으면 잠들고, 다음 접속 때 1~2분 깨어나는 시간이 걸립니다. 시연 전에 한 번 열어 두세요.
+무료 Render 서비스는 15분 동안 접속이 없으면 잠들고, 다음 접속 때 1분 정도 깨어나는 시간이 걸립니다. 시연 전에 한 번 열어 두세요.
+Hugging Face Spaces용 배포 워크플로(`Deploy to Hugging Face Space`)도 남겨 뒀습니다. 무료 CPU 한도 때문에 지금은 수동 실행만 합니다.
 
 ## 폴더 구조
 ```
@@ -94,7 +92,10 @@ chatbot/
   templates/, static/   화면 (app.css는 Tailwind로 빌드한 파일)
 data/                   적재할 CSV 4개
 index/                  build_index가 만든 임베딩
-Dockerfile              Hugging Face Spaces 배포용
+Dockerfile              배포용 (ONNX 8비트 모델, Render·Hugging Face 공용)
+render.yaml             Render Blueprint 설정
+scripts/                export_onnx.py(모델 경량화), compare_encoders.py(200문항 비교)
+tests/                  시험 질문 200개
 netlify/                Netlify에 올릴 폴더 (_redirects로 Space에 연결)
 tailwind/               디자인 토큰. 화면 클래스를 바꿨다면 web 폴더에서 아래 명령으로 app.css 다시 빌드
                         npx tailwindcss@3 -c tailwind/tailwind.config.js -i tailwind/input.css -o chatbot/static/chatbot/app.css --minify
